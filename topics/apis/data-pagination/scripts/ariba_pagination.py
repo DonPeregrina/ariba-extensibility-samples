@@ -100,12 +100,19 @@ def analytical_reporting_sync_api_count(view_template, filters):
     '''
 
     parsed_json = call_ar_sync_api(view_template, filters, path="/count")
+    print(f"este es todo el json: {parsed_json}")
 
-    print(f"Maximum records per page: {parsed_json['MaxRecordsInEachPage']}")
-    print(f"Total number of pages in result set: {parsed_json['TotalPages']}")
-    print(
-        f"Total number of records in result set: {parsed_json['TotalRecords']}")
+    try:
+        max_records_per_page = parsed_json['MaxRecordsInEachPage']
+        total_pages = parsed_json['TotalPages']
+        total_records = parsed_json['TotalRecords']
 
+        print(f"Maximum records per page: {max_records_per_page}")
+        print(f"Total number of pages in result set: {total_pages}")
+        print(f"Total number of records in result set: {total_records}")
+    except KeyError as e:
+        print(f"Key error: {e}. Please check the JSON response.")
+    
 
 def analytical_reporting_sync_api_paginate(view_template, filters):
     '''

@@ -18,6 +18,10 @@ BASE64_AUTHSTRING = getenv('BASE64_AUTHSTRING')
 NEXT_REFRESH = None
 VERBOSE = False
 
+print(f"Realm: {REALM}")
+print(f"API_OAUTH_URL: {API_OAUTH_URL}")
+print(f"BASE64_AUTHSTRING: {BASE64_AUTHSTRING}")
+
 
 class RunMode(Enum):
     access_token = 'access_token' 
@@ -31,7 +35,7 @@ class RunMode(Enum):
 def get_access_token():
     global NEXT_REFRESH
     NEXT_REFRESH = datetime.now() + timedelta(seconds=1320)
-
+    print("Entro a get_access_token")
     payload = 'grant_type=client_credentials'
     headers = {
         'Authorization': f"Basic {BASE64_AUTHSTRING}",
