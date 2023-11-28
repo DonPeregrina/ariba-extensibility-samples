@@ -7,6 +7,11 @@ import urllib.parse
 from dotenv import load_dotenv
 load_dotenv()
 
+## Sino lo has hecho crea o refresca el token con los siguientes comandos
+## python ariba_authentication.py --mode=access_token --verbose
+## python ariba_authentication.py --mode=refresh_token --verbose
+
+
 # Cargando variables de entorno
 REALM = getenv('REALM')
 API_KEY = getenv('API_KEY')
@@ -21,19 +26,10 @@ def get_access_token():
     raise ValueError(f"Authentication file {credential_path} does not exist. "
                      "Run the ariba_authentication.py script before this script.")
 
-def call_ar_sync_api(api_name, mode, save, user, passwordAdapter, apiUrl, contractId, page_token=None):
-    headers = {
-        'Authorization': f"Bearer {get_access_token()}",
-        'apiKey': API_KEY
-    }
+def call_ar_sync_api(params,api_name,request_url, mode, save, headers, contractId, page_token=None):
+    
 
-    params = {
-        'realm': REALM,
-        'user': user,
-        'passwordAdapter': passwordAdapter
-    }
-
-    request_url = f"{API_URL}/{api_name}/v1/prod/{apiUrl}/"
+    
     if page_token:
         params['pageToken'] = page_token
 
@@ -43,7 +39,10 @@ def call_ar_sync_api(api_name, mode, save, user, passwordAdapter, apiUrl, contra
     print(f"Y headers: {headers}")
     print (f"Contrato: {contractId}")
 
-    response = requests.get(request_url + contractId, headers=headers, params=params)
+    if mode == "contract":
+        response = requests.get(request_url + contractId, headers=headers, params=params)
+    elif mode == "paginate":
+        response = requests.get(request_url, headers=headers, params=params)
 
 
 
@@ -62,16 +61,46 @@ def call_ar_sync_api(api_name, mode, save, user, passwordAdapter, apiUrl, contra
 
     return result
 
-def analytical_reporting_sync_api(api_name, mode, save, user, passwordAdapter, apiUrl, contractId):
+def analytical_reporting_sync_api_paginate(api_name, mode, save, user, passwordAdapter, apiUrl, contractId):
+    headers = {
+        'Authorization': f"Bearer {get_access_token()}",
+        'apiKey': API_KEY
+    }
+
+    params = {
+        'realm': REALM,
+        'user': user,
+        'passwordAdapter': passwordAdapter
+    }
+    request_url = f"{API_URL}/{api_name}/v1/prod/{apiUrl}/"
     page_token = ""
     while page_token != "STOP":
-        parsed_json = call_ar_sync_api(api_name, mode, save, user, passwordAdapter, apiUrl, contractId, page_token=page_token)
+        parsed_json = call_ar_sync_api(params,api_name,request_url, mode, save, headers, contractId, page_token=page_token)
+        print(f"Total number of records in response: {len(parsed_json.get('Records', []))}")
+        page_token = parsed_json.get("PageToken", "STOP")
+
+def analytical_reporting_sync_api(api_name, mode, save, user, passwordAdapter, apiUrl, contractId):
+    
+    headers = {
+        'Authorization': f"Bearer {get_access_token()}",
+        'apiKey': API_KEY
+    }
+
+    params = {
+        'realm': REALM,
+        'user': user,
+        'passwordAdapter': passwordAdapter
+    }
+    request_url = f"{API_URL}/{api_name}/v1/prod/{apiUrl}/"
+    page_token = ""
+    while page_token != "STOP":
+        parsed_json = call_ar_sync_api(params,api_name,request_url, mode, save, headers, contractId, page_token=page_token)
         print(f"Total number of records in response: {len(parsed_json.get('Records', []))}")
         page_token = parsed_json.get("PageToken", "STOP")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='SAP Ariba API pagination')
-    parser.add_argument('--mode', type=str, default='paginate', choices=['count', 'paginate'])
+    parser.add_argument('--mode', type=str, default='paginate', choices=['contract', 'paginate'])
     parser.add_argument('--api_name', type=str, default='retrieve-contract-workspaces')
     parser.add_argument('--apiUrl', type=str, default='contractWorkspaces')
     parser.add_argument('--contractId', type=str, default='CW2228821')
@@ -82,4 +111,13 @@ if __name__ == "__main__":
     parser.set_defaults(save=False)
 
     args = parser.parse_args()
-    analytical_reporting_sync_api(args.api_name, args.mode, args.save, args.user, args.passwordAdapter, args.apiUrl, args.contractId)
+
+    if args.mode == "paginate" :
+        analytical_reporting_sync_api_paginate(args.api_name, args.filters)
+    elif args.mode == "contract":
+        analytical_reporting_sync_api(args.api_name, args.mode, args.save, args.user, args.passwordAdapter, args.apiUrl, args.contractId)
+    else:
+        raise ValueError(
+            f"Value specified for --mode parameter is not valid. Possible values: contract, paginate")
+    
+    
